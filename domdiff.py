@@ -90,6 +90,8 @@ def parse(url):
 def get_common_parent_node(a,b):
     arr1 = a.split('/')
     arr2 = b.split('/')
+    if len(arr2) < len(arr1):
+        arr1,arr2 = arr2,arr1
     for i in range(len(arr1)):
         if (arr1[i] != arr2[i]):
             return '/'.join(arr1[0:i])
@@ -229,6 +231,7 @@ def extract(u1,u2):
             node_block = []
         else:
             node_block.append(n)
+    
 
     # 求 title 与 Content 的公共节点 ，此节点为正文区域
     # 以此正文区域节点 Xpath 来过滤 非正文区域 节点
@@ -237,15 +240,58 @@ def extract(u1,u2):
     print title_xpath,title_score
     print content_xpath,content_score
     print '=================================================='
+
+    title_block = []
+    content_block = []
+    other_block = []
+    tmp_block = []
+    block_type = 0
     for n in gap:
         if xpath_dict.has_key(n[0]):
-            print n[0],n[2]
-            if n[0] == title_xpath:
-                print '********Title**********'
-            if n[0] == content_xpath:
-                print '********Content********'
-            if n[1] - avg_dist >= 1:
-                print '##############################################'
+            if n[0].find(main_xpath)>=0:
+                tmp_block.append(n[0])
+                print n[0],n[2]            
+                if n[0] == title_xpath:
+                    block_type = 1
+                if n[0] == content_xpath:
+                    block_type = 2
+            if n[1] - avg_dist >= 1 and len(tmp_block) >0 :
+                if block_type == 1:
+                    title_block.extend(tmp_block)
+                    print '#############********Title**********#############'
+                elif block_type == 2:
+                    content_block.extend(tmp_block)
+                    print '############********Content********#############'                    
+                else:
+                    other_block.extend(tmp_block)
+                    print '############********Other********##############'                    
+                block_type = 0
+                tmp_block = []
+
+    #对 结构体 进行 结构签名 simHash
+    #抽取时 比对 签名 ，相同 则按具体路径抽取，否则 按公共父节点抽取
+    #判断是否有重复的结构体，以绝对路径定义范围，相对路径指定数据
+    title_xpath = None
+    for x in title_block:
+        if title_xpath:
+            title_xpath = get_common_parent_node(title_xpath,x)
+        else:
+            title_xpath = x
+    content_xpath = None
+    for x in content_block:
+        if content_xpath:
+            content_xpath = get_common_parent_node(content_xpath,x)
+        else:
+            content_xpath = x
+    print '=================================================='
+    print u2
+    print 'Content:',content_xpath
+    print get_value_by_xpath(content_xpath,t2)
+    print 'Title:'
+    for x in title_block:print x, get_value_by_xpath(x,t2)
+    print 'Other:'
+    for x in other_block:print x, get_value_by_xpath(x,t2)
+
 
 
 if __name__ == '__main__':
